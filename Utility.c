@@ -1,4 +1,4 @@
-#include "Utility.h"
+#include "utility.h"
 #include "UART.h"
 #include "SysClock.h"
 #include "stm32f303xe.h"
