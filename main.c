@@ -15,7 +15,6 @@ int main(void){
 	
 	for(;;)
 	{
-		EXIT15_10IRQHandler();
 		DistanceReading = USSGetDistance();
 		UARTprintf(" Distance = %d.\n\n", DistanceReading);
 		delay(1000);
