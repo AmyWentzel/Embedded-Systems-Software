@@ -41,7 +41,7 @@ void USS_Timer16_Init(void){
 	
 	TIM16->PSC = (SystemCoreClock/1000000) -1; // Set TIM16 Prescaler
 	
-	TIM16->ARR = 9999;  // Set TIM16 ARR
+	TIM16->ARR = 99999;  // Set TIM16 ARR
 	
 	SET_BIT(TIM16->CR1, TIM_CR1_ARPE); // Set CR1 to Auto Reload Preload Enable
 	
@@ -53,7 +53,7 @@ void USS_Timer16_Init(void){
 	
 	SET_BIT(TIM16->CCER, TIM_CCER_CC1E); // Set CCER to Regular Output Channel
 	
-	CLEAR_BIT(TIM16->CCER, TIM_CCER_CC1P); // Set CCER to Active High
+	SET_BIT(TIM16->CCER, TIM_CCER_CC1P); // Set CCER to Active High
 	
 	TIM16->CCR1 |= 9; // Repeating Counter Period = ARR + 1, CCR1 = 10 - 1, CCR1 = 9us
 	
@@ -77,9 +77,9 @@ void USS_Timer3_Init(void)
 	//  III.1 Configure GPIO Pin
 	RCC->AHBENR |= RCC_AHBENR_GPIOCEN; // Enable Clock to GPIOC
 	
-	FORCE_BIT(GPIOC->AFR[0], 0xFUL << 7*4, 1UL << 7*4); // Clear AF7, Set PC7 to AF7 (Low)
+	FORCE_BIT(GPIOC->AFR[0], 0xFUL << 7*4, 2UL << 7*4); // Clear AF7, Set PC7 to AF7 (Low)
 	
-	FORCE_BIT(GPIOA->MODER, 0x3UL << 7*2, MODER_AF << 7*2); //Clear MODER, Set MODER of PC7 to Alternate Function
+	FORCE_BIT(GPIOA->MODER, GPIO_MODER_MODER7, GPIO_MODER_MODER7_1); //Clear MODER, Set MODER of PC7 to Alternate Function
 
 	FORCE_BIT(GPIOA->PUPDR, 0x3UL << 7*2, PUPDR_OFF << 7*2); //Clear PUPDR, set PUPDR of PC7 to No Pull
 	
@@ -92,15 +92,14 @@ void USS_Timer3_Init(void)
 	
 	TIM3->PSC |= (SystemCoreClock/1000000) -1; // Set PSC of TIM3
 	
+	CLEAR_BIT(TIM3->CR1, TIM_CR1_DIR);	
+	
 	TIM3->ARR |= 0xFFFF; // Set ARR of TIM3
 	
-	CLEAR_BIT(TIM3->CCMR1,TIM_CCMR1_IC2F_0); // Clear all bits of IC2F, bits 0 - 3
-	CLEAR_BIT(TIM3->CCMR1,TIM_CCMR1_IC2F_1);
-	CLEAR_BIT(TIM3->CCMR1,TIM_CCMR1_IC2F_2);
-	CLEAR_BIT(TIM3->CCMR1,TIM_CCMR1_IC2F_3);
 	
-	CLEAR_BIT(TIM3->CCMR1,TIM_CCMR1_IC2PSC_0); // Clear IC2PSC, set PSC to zero, bits 0 - 1
-	CLEAR_BIT(TIM3->CCMR1,TIM_CCMR1_IC2PSC_1);
+	CLEAR_BIT(TIM3->CCMR1,TIM_CCMR1_IC2F); // Clear all bits of IC2F, bits 0 - 3
+	
+	CLEAR_BIT(TIM3->CCMR1,TIM_CCMR1_IC2PSC); // Clear IC2PSC, set PSC to zero, bits 0 - 1
 	
 	//  III.3 Configure TIM3 CCR1 for PW measurement on TI2
 	TIM3->CCMR1 |= TIM_CCMR1_CC1S_1; // Set CC1S in CCMR1 to selection 2
@@ -110,7 +109,7 @@ void USS_Timer3_Init(void)
 
 
 	//  III.4 Configure TIM3 to Slave Reset on TI2 Rising Edge
-	CLEAR_BIT(TIM3->SMCR, TIM_SMCR_TS_0); // Set Filtered Input Timer 2 (TI2) to trigger RESET  
+	CLEAR_BIT(TIM3->SMCR, TIM_SMCR_TS); // Set Filtered Input Timer 2 (TI2) to trigger RESET  
 	SET_BIT(TIM3->SMCR, TIM_SMCR_TS_1); // Set (TS[3:0]) in SMCR to 6
 	SET_BIT(TIM3->SMCR, TIM_SMCR_TS_2);
 	
@@ -122,12 +121,11 @@ void USS_Timer3_Init(void)
 	
 	//  III.5 Enable Counter Capture
 	SET_BIT(TIM3->CCER, TIM_CCER_CC1E); // Enable Counter Capture by setting (CC1E and CC2E) in CCER
-	SET_BIT(TIM3->CCER, TIM_CCER_CC2E);
 	
 	// 	III.6 ** ENABLE TIM3 INTERRUPT on TI2 Falling Edge **
 	SET_BIT(TIM3->DIER, TIM_DIER_CC1IE); // Enable TIM3 TI2 to generate interrupt request by setting (CC1IE) in DIER
 	
-	NVIC_SetPriority(TIM3_IRQn, 9); // Set TIM3 IRQ priority to something high under 10, Set to 9
+	NVIC_SetPriority(TIM3_IRQn, 12); // Set TIM3 IRQ priority to something high under 10, Set to 9
 
 	NVIC_EnableIRQ(TIM3_IRQn); // Enable TIM3 IRQ in NVIC
 	
@@ -143,11 +141,14 @@ void USSToggleSensorEnable(void){
 // Part IV - Echo Pulse Width Measurement Interface Functions
 		// READ_SENSOR function - Call this from mainline to get distance measurements whenever!
 int USSGetDistance(void){
-	return lastDistance *170;
+	
+	return TIM3->CCR1 /58;
 }
 
 // Check whether (CC1IF) in SR is set
 void EXIT15_10IRQHandler(void){
+	UARTprintf("Here");
+	UARTgetc();
 	if((TIM3->SR & TIM_SR_CC1IF) !=0){
 		lastDistance = TIM3->CCR1;
 		TIM3->SR &= ~TIM_SR_CC1IF; // this might be bad and dumb;

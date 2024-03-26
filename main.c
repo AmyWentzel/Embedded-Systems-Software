@@ -5,7 +5,9 @@
 #include "stm32f303xe.h"
 
 int main(void){
-	
+	System_Clock_Init();
+	SystemCoreClockUpdate();
+	UART2_init();
 	UARTprintf("Welcome to Lab 5: Ultrasonic Sensor \n\n\n");
 	USS_Timer16_Init();
 	USS_Timer3_Init();
@@ -17,6 +19,6 @@ int main(void){
 	{
 		DistanceReading = USSGetDistance();
 		UARTprintf(" Distance = %d.\n\n", DistanceReading);
-		delay(1000);
+		delay(100);
 	}
 }
